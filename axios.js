@@ -3,40 +3,35 @@ const axios = require('axios');
 
 const INITIAL_USER_ID = process.env.INITIAL_USER_ID;
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
+const INSTAGRAM_BUSINESS_ID = process.env.INSTAGRAM_BUSINESS_ID;
 const URLRoot = 'https://graph.facebook.com/v4.0/'
 const fields = `?fields=`;
 const URLAccessTokenInsert = `&access_token=${ACCESS_TOKEN}`;
-// let mediaURLArray = [];
 
-
+// Anice little async/await for making our axios calls
+const mediaURLGetter = async (mediaID) => {
+  let json = await axios.get(`${URLRoot}${mediaID}${fields}media_url${URLAccessTokenInsert}`)
+    .then(response => response.data.media_url)
+    .catch(error => console.error(error));
+  return json;
+};
 
 // This function gets the URLs for each of the media IDs
-const mediaURLArrayBuilder = (mediaIDArray) => {
-  let mediaIterator = 0;
-  let mediaURLArray = [];
-  const mediaURLGetter = () => {
-    axios.get(`${URLRoot}${mediaIDArray[mediaIterator]}${fields}media_url${URLAccessTokenInsert}`)
-      .then(response => {
-        mediaURLArray = [...mediaURLArray, response.data.media_url];
-        console.log(mediaURLArray);
-      })
-      .catch(error => {
-        console.log(error);
-    });
-    if(mediaIterator < mediaIDArray.length - 1 || mediaIterator === 19) {
-      mediaIterator++;
-      mediaURLGetter();
-    } else {
-      console.log(mediaIterator);
-      console.log(mediaURLArray);
-    };
-  };
-  mediaURLGetter();
+const mediaURLArrayBuilder = mediaIDArray => {
+  let mediaURLPromises = [];
+  mediaIDArray.forEach((mediaID, index) => {
+    mediaURLPromises[index] = mediaURLGetter(mediaID);
+  });
+  Promise.all(mediaURLPromises)
+    .then(response => console.log(response))
+    .catch(error => console.error(error));
 };
 
 // This function will give you an array of objects with the media IDs
-const mediaGetter = (igramBusinessAccountID) => {
-  axios.get(`${URLRoot}${igramBusinessAccountID}${fields}media${URLAccessTokenInsert}`)
+// If you will use this in conjunction with the ID getter functions, add in igramBusinessAccountID as a parameter, and change the
+// INSTAGRAM_BUSINESS_ID in the axios URL to match the parameter
+const mediaGetter = () => {
+  axios.get(`${URLRoot}${INSTAGRAM_BUSINESS_ID}${fields}media${URLAccessTokenInsert}`)
     .then(response => {
       const results = response.data.media.data;
       let mediaIDArray = [];
@@ -52,7 +47,9 @@ const mediaGetter = (igramBusinessAccountID) => {
 };
 
 // Once you have the FaceBook userID, this will give you the instagram business account ID associated with that FB page
-const instaIDGetter = (facebookID) => {
+// These are now deprecated due to having the Istagram business account ID in the .env. This saves calls in the long run, and is more akin
+// to how this will behave in production.
+const instaIDGetter = facebookID => {
   axios.get(`${URLRoot}${facebookID}${fields}instagram_business_account${URLAccessTokenInsert}`)
     .then(response => {
       mediaGetter(response.data.instagram_business_account.id);
@@ -73,17 +70,4 @@ const FBIDGetter = () => {
   });
 };
 
-FBIDGetter();
-
-// function completeURLArray() {
-//   return new Promise((resolve, reject) => {
-//     if(mediaURLArray.length ===)
-//   });
-// };
-
-// async function asyncCall() {
-//   let result = await completeURLArray();
-//   console.log(result);
-// }
-
-// asyncCall();
+mediaGetter();
